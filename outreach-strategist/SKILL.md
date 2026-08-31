@@ -68,13 +68,35 @@ Rules:
 | Person/company enrichment                 | `apollo-api`, `harvestapi`, `icypeas`, `emailable`                                                                                                                                                                     |
 | Research a contact/company/topic          | `exa-api`, `linkup`                                                                                                                                                                                                    |
 | Social buying signals                     | `trigify` skill (poller already runs hourly)                                                                                                                                                                           |
-| Relationship paths / warm intros          | Graph.one via Mission Control (`/feed`, Relationships tab) — MC API at `MC_BASE_URL`                                                                                                                                   |
-| Build a campaign (cadence→copy→QA→stage)  | `/outreach` (`outreach-command` skill) — the ONLY way copy gets written                                                                                                                                                |
+| Relationship paths / warm intros          | Graph.one via Mission Control — MC API at `http://mc:8765` (see Engine integration below)                                                                                                                              |
+| Build a campaign (cadence→copy→QA→stage)  | Mission Control → host engine (see Engine integration below) — the ONLY way copy gets written                                                                                                                          |
 | Campaign/prospect staging state           | Mission Control API + `woodpecker` skill (read)                                                                                                                                                                        |
 | Playbooks: personas, segment messaging    | `business-development` skill workspace                                                                                                                                                                                 |
 | Personalized memes (follow-ups, comments) | `memelord` skill — only if campaign `messaging.memes.allowed: true`; never touch 1, never services-type streams, in-context and never mocking the recipient, every meme individually human-approved regardless of tier |
 
-## Preflight (MANDATORY before any campaign action)
+## Engine integration (CRITICAL — audited 2026-08-31)
+
+The pipeline engine (contacts_source, signals_source, signal_processor,
+envelope_runner, staging) runs on the VM HOST via the watcher crons — NOT in
+this container. Two container-side traps make in-container engine runs
+silently wrong, so:
+
+- **NEVER execute the engine python scripts yourself** (the copies under
+  `outreach-command/scripts/` are there for the §10 headless step protocol,
+  not for you to run): the container has NO `profile.yaml`, so copy_rules
+  (word counts etc.) would silently drop from any envelope you built here —
+  a real wet-run bug class. Only the host engine builds envelopes.
+- **Build/stage actions go through Mission Control** at `$MC_BASE_URL`
+  (= `http://mc:8765` in-container since the 2026-08-31 compose fix; if the
+  env is ever missing, `http://mc:8765` is the docker-network address).
+  Server-to-server writes carry the `x-outreach-secret` header from
+  `OUTREACH_WRITE_SECRET`. MC's bridge writes the job signal to the HOST
+  runs dir; the host watcher (5-min cron) runs the engine with the correct
+  profile, runs dir, and docker-cp bridge; results come back as MC state +
+  Woodpecker DRAFTs.
+- When invoked headlessly BY the engine as a pipeline step (§10 protocol:
+  message names a run dir with `envelope.json`), follow §10 exactly — read
+  envelope, write only your artifact, print the DONE/FAIL line.
 
 Before ANY cohort build, staging, list change, or new-campaign start — not
 once per campaign, every time — run this checklist with your own tools and

@@ -117,7 +117,7 @@ def main():
             "SELECT src,rel,dst,note FROM edges WHERE src LIKE ? OR dst LIKE ? LIMIT 50", (k, k)
         ).fetchall(), ["src", "rel", "dst", "note"])
     elif a.cmd == "recent":
-        since = (datetime.datetime.utcnow() - datetime.timedelta(days=a.days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=a.days)).strftime("%Y-%m-%dT%H:%M:%SZ")
         q = "SELECT ts,type,campaign,stream,contact,company,summary FROM events WHERE ts>=?"
         args = [since]
         if a.type: q += " AND type=?"; args.append(a.type)
