@@ -1,0 +1,39 @@
+outreach-strategist/README.md
+  s_2b93d4c2b1b649::t_224fdda488e645 1-57
+outreach-strategist/SKILL.md
+  s_2b93d4c2b1b649::t_a75fc630cdfd92 1-139
+outreach-strategist/campaigns/README.md
+  s_2b93d4c2b1b649::t_b82e30d8f252f1 1-69
+outreach-strategist/campaigns/_template/campaign.yaml
+  s_2b93d4c2b1b649::t_70b73058aaca62 1-54
+outreach-strategist/scripts/outreach-deploy-strategist.sh
+  s_2b93d4c2b1b649::t_d4c7a355dbe711 1-56
+outreach-strategist/scripts/outreach-report-cron.sh
+  s_2b93d4c2b1b649::t_a72d645b4c4fe7 1-64
+outreach-strategist/scripts/outreach-wire-discord-channel.sh
+  s_2b93d4c2b1b649::t_aa60492472c1d5 1-83
+outreach-strategist/subskills/outreach-cadence-strategist.SKILL.md
+  s_2b93d4c2b1b649::t_247d7d11a414d2 1-899
+outreach-strategist/subskills/outreach-command.SKILL.md
+  s_2b93d4c2b1b649::t_d7dbfad583588c 1-908
+outreach-strategist/subskills/outreach-copy-qa.SKILL.md
+  s_2b93d4c2b1b649::t_5ddbc49064293b 1-827
+outreach-strategist/subskills/outreach-copywriter.SKILL.md
+  s_2b93d4c2b1b649::t_1d912849c28e63 1-877
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "62cb4d9f5eca4720eed0cad0e97537814c6efc38",
+  "prompts": {},
+  "sessions": {
+    "s_2b93d4c2b1b649": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "95308203-216a-427d-91fd-7e1a29990c90",
+        "model": "claude-fable-5"
+      },
+      "human_author": "romeoman <romeo@man.digital>"
+    }
+  }
+}
