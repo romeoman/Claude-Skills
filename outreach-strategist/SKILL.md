@@ -35,6 +35,7 @@ campaigns/
     routing.md                  # (if present) cross-stream suppression rules
     mentionable-interviewees.md # (optional) allowlist of nameable people
     notes.md                    # (optional) running decisions log
+    learnings.md                # campaign-specific lessons (append + read)
     dossiers/                   # per-contact research dossiers you write
     streams/<name>/stream.yaml  # (optional) per-stream objective/cadence/tier
 ```
@@ -73,6 +74,26 @@ Rules:
 | Playbooks: personas, segment messaging    | `business-development` skill workspace                                                                                                                                                                                 |
 | Personalized memes (follow-ups, comments) | `memelord` skill — only if campaign `messaging.memes.allowed: true`; never touch 1, never services-type streams, in-context and never mocking the recipient, every meme individually human-approved regardless of tier |
 
+## Preflight (MANDATORY before any campaign action)
+
+Before ANY cohort build, staging, list change, or new-campaign start — not
+once per campaign, every time — run this checklist with your own tools and
+post the PASS/FAIL table in the thread. Any FAIL on a required row stops the
+action; report the blocker instead of working around it.
+
+| #   | Check                                                                                                                                       | How                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| 1   | Campaign + stream YAMLs parse and the target stream is not `pending`/blocked                                                                | read + parse the files                                  |
+| 2   | routing.md conflicts: nobody in the cohort is active in another stream, suppressed, an interviewee, or a 2nd person at an in-flight company | kb.py contact/company per cohort member                 |
+| 3   | Woodpecker reachable; target campaign shell exists and is DRAFT/paused; mailbox daily limits + warmup state acceptable for planned volume   | Woodpecker API (read)                                   |
+| 4   | HubSpot source + curated lists readable, counts sane                                                                                        | HubSpot API (read)                                      |
+| 5   | Signal/research providers responding (only those the action needs)                                                                          | 1 cheap read each: Trigify/Exa/Linkup/Apollo/HarvestAPI |
+| 6   | Dossiers exist + fresh (≤30d) for every cohort member; anchor observable ≤90d                                                               | dossier files + kb.py                                   |
+| 7   | Autonomy tier permits the intended action; AI-disclosure decision made if sending                                                           | stream.yaml + campaign.yaml                             |
+| 8   | kb.py reachable (`kb.py stats` runs) and LEARNINGS read this session                                                                        | run it                                                  |
+
+Log the preflight result itself to the kb (`type=decision`).
+
 ## Standard workflow
 
 1. **Intake** — load campaign folder; restate objective + current status in
@@ -94,6 +115,44 @@ Rules:
 6. **Timing** — when watchers surface a strong signal for a listed contact,
    recommend acting on it (who, why now, which touch); do not act without the
    human go.
+
+## Memory: knowledge base + graph (LOG EVERYTHING, QUERY FIRST)
+
+`bin/kb.py` is your persistent memory — a SQLite event log + knowledge graph
+at `knowledge/outreach.db`. Two non-negotiable habits:
+
+1. **Log everything, immediately**: every send, reply, social interaction,
+   signal, research finding, routing/preflight decision, booking,
+   suppression, incident — `kb.py log --type <t> ...` with campaign, stream,
+   contact, company, summary, url. Relationships go in as edges
+   (`person:… works_at company:…`, `person:… replied_positive campaign:…`,
+   `company:… attended webinar:…`). An action that isn't logged didn't
+   happen.
+2. **Query before acting**: before ANY touch, reply draft, or cohort
+   inclusion, run `kb.py contact <who>` and `kb.py company <org>` and use
+   the full history — prior touches, replies, signals, peers at the same
+   company, past mistakes. This is how we connect dots and never re-send,
+   re-ask, or contradict ourselves.
+
+`kb.py recent` feeds the daily nudge; `kb.py stats` feeds the weekly report.
+
+## Self-improvement loop
+
+- **Learnings**: append dated, evidence-linked entries to the campaign's
+  `learnings.md` (tactical) and the skill-level `LEARNINGS.md`
+  (cross-campaign) after every reply batch, weekly report, and incident.
+  Read both at session start. Also log each learning to the kb
+  (`type=learning`) so it's queryable.
+- **Improvement pass**: after each weekly report, invoke the
+  `self-improving-agent` skill over the week's kb events + learnings: what
+  copy angles got replies, which signals converted, what QA kept catching,
+  what the preflight missed. Turn conclusions into concrete file edits
+  (SKILL.md, research-protocol.md, routing.md, stream yamls, messaging
+  vocab suggestions for the pipeline).
+- **Publication**: apply the edits in the workspace and note them in the
+  weekly report — the skills-sync cron commits and publishes merged changes
+  to the git repos automatically. Changes to GUARDRAILS or autonomy tiers
+  are the exception: propose to Romeo, never self-apply.
 
 ## Autonomy tiers
 
