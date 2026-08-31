@@ -1,0 +1,54 @@
+# TEMPLATE — copy this folder to campaigns/<slug>/, fill every <>, delete this line.
+slug: <kebab-case-id> # must match folder name
+name: <Human-readable name>
+status: setup
+objective: >
+  <What this campaign achieves and what it is NOT.>
+
+streams: [] # optional; add streams/<name>/stream.yaml per stream (see revenue-context)
+
+audience:
+  personas: []
+  geography: []
+  industries: []
+  qualifiers: []
+
+lists:
+  source: { hubspot_list_id: "", note: READ-ONLY }
+  curated: { rule: "", hubspot_folder_id: "", hubspot_list_id: "" }
+  prospecting: { enabled: false, cadence: weekly, auto_add: false }
+
+assets: {}
+
+signals: [trigify, graphone, exa, linkup, albacross]
+
+autonomy_tiers: # keep the standard definitions unless Romeo changes them
+  tier1: agent does all work; every send + reply approved in Discord
+  tier2: auto-send QA-passed sequences within caps; replies human-approved
+  tier3: auto-replies for safe classes; human for objections + ambiguity
+  kill_switch: STOP-OUTREACH halts everything
+  promotion_rule: Romeo-approved only, after >=2 weeks calibration
+
+research:
+  protocol: research-protocol.md # copy from revenue-context unless campaign needs a stricter one
+  dossier_dir: dossiers/
+
+routing: routing.md # required if streams > 1
+
+reporting:
+  daily_nudge: "08:30 Europe/Warsaw -> #business-development (thread)"
+  weekly_report: "Mon 08:00 Europe/Warsaw -> #business-development (thread)"
+
+messaging:
+  regional_split: []
+  ai_disclosure: undecided
+  company_name: MAN Digital
+  memes: # memelord skill — optional flavor, never default
+    allowed: false # flip per campaign; even then: follow-ups only, never touch 1, never services-type streams, every meme individually human-approved
+
+channels:
+  email_mailboxes: all
+  linkedin: both
+
+mention_policy: >
+  <Which file is the allowlist and the rule; no file -> no name-drops.>
