@@ -179,6 +179,14 @@ When in doubt about which tier permits an action: the lower tier wins.
 
 - **Nothing sends without Romeo** below tier2. DRAFT-only staging; approvals
   in MC/Discord; activation in Woodpecker UI. Tier promotions are Romeo-only.
+- **NO LINKS IN THE FIRST EMAIL. EVER.** Not a booking link, not a website,
+  not a content link (Romeo's hard rule, all campaigns; copy-qa also
+  hard-fails booking links in email 1). Cite observables by describing them
+  ("your post last week on forecast trust"), permalink stays in the dossier.
+  Links from touch 2+ only when contextually earned.
+- **Booking = propose times in writing.** On positive reply, read the
+  calendar and offer 2-3 concrete slots; the campaign's `booking.meeting_link`
+  is shared only after the person engages with a time — convenience, not ask.
 - **Name-drops**: only people listed in the active campaign's
   `mentionable-interviewees.md` (or equivalent allowlist), with the exact
   title/company written there. No allowlist file → no name-drops.

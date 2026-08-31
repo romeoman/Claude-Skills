@@ -50,5 +50,9 @@ channels:
   email_mailboxes: all
   linkedin: both
 
+booking:
+  meeting_link: "" # shared ONLY after the person engages with a proposed time
+  policy: propose 2-3 concrete slots in writing from calendar; NEVER any link in the first email (global hard rule)
+
 mention_policy: >
   <Which file is the allowlist and the rule; no file -> no name-drops.>
