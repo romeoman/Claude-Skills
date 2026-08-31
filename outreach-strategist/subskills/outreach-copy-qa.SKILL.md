@@ -707,6 +707,50 @@ the `era: angle` entries in `.frameworks` (tagged with the `angle` they belong t
   `era: angle` frameworks). The engine/skills never change; only this vocabulary
   grows. The default stays `sell`; a non-sell angle is always chosen explicitly.
 
+## §14 The engine is HOST-ONLY — every build routes through Mission Control (MANDATORY)
+
+The outreach **engine python** — `signal_processor.py`, `envelope_runner.py`,
+`contacts_source.py`, `signals_source.py`, `outreach_approval_listener.py`,
+`positioning.py`, and every other engine script deployed under
+`outreach-command/scripts/` — runs on the **VM HOST**, invoked by the watcher
+cron. It must **NEVER** be executed inside the openclaw container. Those copies
+sit beside your skill so the §10 headless step protocol has the contract code
+available; they are not there for you to run.
+
+**Why this is a hard rule, not a preference.** The container has **no
+`profile.yaml`**. Run the engine there and `copy_rules` — email/LinkedIn word
+bounds, subject rules, the first-touch link policy, the booking-link touch
+threshold — silently drop out of the envelope, and the built-in defaults apply
+instead. Nothing errors. The run reports SUCCESS while producing copy graded
+against rules the operator never configured. This is a **real wet-run bug
+class**, already observed — silent config loss that looks exactly like a
+healthy run.
+
+**The only sanctioned path for a build or a stage** is Mission Control:
+
+1. Call MC at `$MC_BASE_URL` (= `http://mc:8765` on the docker network when the
+   env var is absent). Server-to-server writes carry the `x-outreach-secret`
+   header from `OUTREACH_WRITE_SECRET`; without it MC returns 401 by design.
+2. MC's outreach bridge writes the job signal into the **HOST** runs dir.
+3. The **HOST watcher cron** picks it up and runs the engine with the correct
+   `profile.yaml`, the correct runs dir, and the docker-cp bridge.
+4. Results come back as MC state plus Woodpecker **DRAFT**s. Nothing sends.
+
+**This applies to every invocation path**, with no exception:
+
+- **Headless** (§10) — the engine already handed you a run dir: read
+  `envelope.json`, write your one artifact, print the DONE/FAIL line. Never
+  shell out to an engine script to "fill a gap" in your inputs.
+- **Interactive** — a human typing `/outreach …`, or asking for a build in any
+  channel, gets the same routing. An interactive invocation is not permission
+  to run the pipeline locally; it is a request to submit a job to Mission
+  Control.
+
+If MC is unreachable, the secret is missing, or a required envelope section is
+absent, **say so and stop**. Reporting a blocked build honestly is correct;
+running the engine in-container to get past the blocker is not — it yields a
+run that claims success while quietly ignoring the operator's copy rules.
+
 <!-- END OUTREACH-ENGINE GUARD -->
 
 # Outreach copy QA
