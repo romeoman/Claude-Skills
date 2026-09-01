@@ -56,8 +56,23 @@ Rules:
    status, one-line objective).
 3. **Starting a new campaign** = create a new `campaigns/<slug>/` folder from
    the schema in `campaigns/README.md`, fill it from the user's brief, confirm
-   the yaml back to the user before any list/pipeline work.
-4. Never blend context across campaigns. Facts, allowlists, and targets from
+   the yaml back to the user before any list/pipeline work. A brief can be one
+   sentence ("I'm at SaaStr London in October, let's meet people there") — turn
+   it into a filled campaign.yaml and ASK about anything you had to guess
+   rather than inventing it. Copy `research-protocol.md` and `routing.md` from
+   an existing campaign unless the new one needs different rules.
+4. **Time-boxed campaigns** (events, conferences, launches, seasonal pushes)
+   fill the `time_box` block. Enforce it: never build or stage a cohort whose
+   touches would land after `hard_stop`, and when the event has passed, stop —
+   an "see you at X" email the day after X is worse than no email. Use the
+   event angles that already exist in the vocabulary (`event_physical`,
+   `event_coattend`, `event_webinar`); their hard rules are in guard §13 —
+   the draw is the ROOM, not the product, and the pitch waits until after.
+   If an attendee list comes from outside HubSpot (conference app, LinkedIn
+   event, a public speaker list), record its provenance in the campaign —
+   compliance requires a data source, and a scraped list is a legal question,
+   not just a technical one.
+5. Never blend context across campaigns. Facts, allowlists, and targets from
    one campaign must not leak into another's copy or research.
 
 ## Delegation map
@@ -158,6 +173,39 @@ at `knowledge/outreach.db`. Two non-negotiable habits:
    re-ask, or contradict ourselves.
 
 `kb.py recent` feeds the daily nudge; `kb.py stats` feeds the weekly report.
+
+## Sourcing a list for a new campaign (events, lists, anything)
+
+When Romeo says "I'm going to X, find me people worth talking to", you source
+candidates, vet them, and hand back a shortlist — you never sequence a raw
+scrape. Use `outreach-engine/event_sourcing.py` (source-agnostic: it takes raw
+records from ANY adapter and runs the funnel).
+
+**Sourcing routes, cleanest legal basis first** — say which you used:
+
+1. `public_page` — the event's own speaker/agenda/exhibitor page. Fetch with
+   `crawl4ai` (needs `Authorization: Bearer $CRAWL4AI_API_TOKEN`) or `exa-api`.
+   Published for exactly this purpose. Prefer this.
+2. `post_engagement` — people who publicly commented on / reacted to the
+   event's posts (`harvestapi` `company-posts` -> `comment-reactions` /
+   `comment-replies`). THEY published that engagement.
+3. `own_network` — who we already know is going (Graph.one via MC).
+4. `manual` — a list Romeo pastes or a vendor export.
+5. `platform_scrape` — a platform's gated attendee list. **ToS/contract risk**
+   (hiQ v. LinkedIn: public scraping survived CFAA but LinkedIn wins on
+   contract, which is the lever it actually uses). The funnel flags these
+   `legal_review`; surface that to Romeo and get an explicit decision. Never
+   quietly include them.
+
+**Then run the funnel, in this order** — it is cheapest-and-most-disqualifying
+first, so you never spend enrichment credits on someone we may not email:
+`normalize` -> `dedupe` -> `triage` (provenance, suppression, CRM, ICP fit) ->
+`summarize`. Report counts by status AND by source, plus anything needing legal
+review. **Re-run `dedupe` after enrichment** — an email-only and a
+LinkedIn-only record for the same human cannot merge until the email exists.
+
+`needs_enrichment` means no contact method yet — enrich before use, do not
+guess an address. `excluded` is not a failure: say how many and why.
 
 ## Staying current (the practice bank)
 

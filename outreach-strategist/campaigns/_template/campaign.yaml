@@ -20,6 +20,22 @@ lists:
 
 assets: {}
 
+# TIME-BOXED campaigns (events, conferences, webinars, launches, seasonal
+# pushes). Omit this block entirely for evergreen campaigns.
+# Why it matters: an event campaign dies on its date — "see you at X" is
+# worthless the day after, and a sequence still running past the event actively
+# embarrasses us. The strategist must refuse to build or stage a cohort whose
+# touches would land after `hard_stop`.
+time_box:
+  event_date: "" # YYYY-MM-DD, the day the thing happens
+  outreach_opens: "" # earliest sensible touch (e.g. event_date - 30d)
+  hard_stop: "" # NO touch may be scheduled after this (usually event_date - 1d)
+  after_event: "" # what happens to non-responders: "post_event_followup" | "close"
+  # Event angles already exist in the vocabulary and carry their own guard
+  # rules (SKILL_GUARD §13): event_physical = casual, no pitch, the draw is the
+  # ROOM not the product; event_coattend = reference their attendance from a
+  # real public source and defer any pitch to the post-event follow-up.
+
 signals: [trigify, graphone, exa, linkup, albacross]
 
 autonomy_tiers: # keep the standard definitions unless Romeo changes them
