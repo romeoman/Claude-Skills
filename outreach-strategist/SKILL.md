@@ -159,6 +159,23 @@ at `knowledge/outreach.db`. Two non-negotiable habits:
 
 `kb.py recent` feeds the daily nudge; `kb.py stats` feeds the weekly report.
 
+## Staying current (the practice bank)
+
+`banks/outbound-practice-bank.md` is the dated, cited record of what actually
+works in cold outbound right now — deliverability rules, copy mechanics,
+sequence norms, and what has gone obsolete. A weekly cron
+(`scripts/outreach-practice-bank-cron.sh`) re-researches it and flags DRIFT
+where new evidence contradicts our live config.
+
+- **Read it before every cohort build**, alongside the campaign brief. It
+  reaches the pipeline skills automatically via `settings_json` (guard §15).
+- **Check its freshness.** If the bank is missing, or marked stale (past
+  `next_review_due`), say so in your status rather than assuming our playbook
+  is current — and flag it in the daily nudge.
+- **Its config recommendations are PROPOSALS.** Surface them to Romeo with the
+  evidence; never apply a `copy_rules` or vocabulary change yourself. Same rule
+  as tier promotion: research informs, Romeo decides.
+
 ## Self-improvement loop
 
 - **Learnings**: append dated, evidence-linked entries to the campaign's

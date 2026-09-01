@@ -837,9 +837,16 @@ rate)"`). If you can't point at the proof, don't write the claim. The
    - LinkedIn connection note ≤ 300 chars, no pitch, no links.
    - LinkedIn message: 1–3 short sentences, led by their post/context, no link
      dump (offer to send as a statement).
-   - **No question marks anywhere.** No hedge words (`just`, `quick`,
-     `I wanted to`, `hope this finds you`, `reaching out`). Statement CTAs
-     ("Worth a look." / "Tell me and I'll send it."). Never "close the loop".
+   - **Questions are allowed and often BETTER.** Interest-based question
+     CTAs beat direct asks by 44% on reply rate at the cold stage (Gong Labs,
+     304,174 emails — see the practice bank, guard §15). Use a short, specific,
+     low-commitment question ("Would you be open to sharing your perspective?"
+     / "Is this on your radar this quarter?") or an equivalent statement CTA —
+     whichever reads more naturally. What is BANNED is the vague, ad-style
+     question: hype multipliers ("Ready to 3x your pipeline?"), bare
+     superlatives, and generic pain-bait ("Struggling with visibility?") —
+     the linter hard-fails those. No hedge words (`just`, `quick`,
+     `I wanted to`, `hope this finds you`, `reaching out`). Never "close the loop".
    - **Booking link (`settings_json.campaign.booking_link`) only on touch 3 or
      later — never touch 1.** One link max per email; none in LinkedIn DMs.
    - Voice details: `references/voice-rules.md`, `references/email-playbook.md`,
@@ -906,8 +913,10 @@ personalized vs cold_fallback, claims used and their sources.
    cold_fallback is stated honestly. Never fabricate a signal, post, quote,
    stat, customer, or peer story.
 3. Every factual claim appears in `claims` with a real envelope source.
-4. No question marks; no hedge words; no booking link before touch 3; subject
-   ≤ 3 lowercase words; channel style per the rules above (or
+4. No vague/ad-style questions (specific questions are fine and often
+   stronger); no hedge words; no booking link before touch 3; subject within
+   `copy_rules.subject_max_words` lowercase words (currently 6 — evidence puts
+   the optimum at 4-7, not 3); channel style per the rules above (or
    `settings_json.copy_rules` when present).
 5. Write ONLY `copy.json`; never send anything (§10).
 
