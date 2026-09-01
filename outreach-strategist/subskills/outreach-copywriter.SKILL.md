@@ -754,6 +754,40 @@ absent, **say so and stop**. Reporting a blocked build honestly is correct;
 running the engine in-container to get past the blocker is not — it yields a
 run that claims success while quietly ignoring the operator's copy rules.
 
+## §15 The outbound practice bank — write to CURRENT practice, not a stale playbook (MANDATORY)
+
+Outbound moves fast: deliverability requirements tighten, recipients and
+filters learn to spot LLM-written copy, and tactics that worked two years ago
+now actively hurt. A sequence written to a 2024 playbook can be technically
+"correct" against our config and still be obsolete.
+
+When `settings_json.outbound_practice_bank` is present in the envelope it is
+the **current, dated, cited record of what works now** (refreshed weekly by
+`scripts/outreach-practice-bank-cron.sh`). It reaches you through §8 like any
+other envelope field.
+
+- **Cadence-strategist:** honor its findings on touch count, day spacing, and
+  multichannel sequencing over habit or a remembered default.
+- **Copywriter:** honor its findings on length, subject style, CTA form, and
+  especially its "now obsolete" list — do not reach for an opener or a
+  structure the bank says is penalized.
+- **Copy-qa:** judge copy against the bank's current norms as well as the
+  configured rules, and say which one you are applying when they differ.
+
+Two hard rules:
+
+1. **`copy_rules` still wins on anything deterministic.** The bank informs
+   judgment; it never silently overrides a configured bound, the link policy,
+   or any gate. Where the bank contradicts `copy_rules`, follow `copy_rules`
+   and FLAG the conflict in your output — that flag is how a stale config gets
+   noticed. Never edit `copy_rules` yourself; changes are Romeo's call.
+2. **Respect staleness.** If `settings_json.outbound_practice_bank_meta.stale`
+   is true, the research has aged past its review date: use it as a weak prior,
+   say plainly in your output that the bank is stale, and do not present its
+   claims as current. If no bank is present at all, say nothing about "best
+   practices" you cannot source — an absent bank is never a licence to invent
+   one.
+
 <!-- END OUTREACH-ENGINE GUARD -->
 
 # Outreach copywriter
