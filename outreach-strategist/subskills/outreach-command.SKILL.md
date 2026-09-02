@@ -575,8 +575,15 @@ envelope (UI≡backend — a UI field the backend ignores is a drift bug, guarde
 - **Global channel toggles** — `GET /api/outreach/signal-settings → {channels:{…}}`.
   `trigify_monitors.channel_prefs()` consults it (fail-CLOSED to V1 defaults —
   linkedin/reddit/twitter/youtube/podcasts ON, V1.5 OFF — when MC is unreachable). A
-  channel OFF refuses new listening creates for that channel; Social-Signals
-  (LinkedIn person monitoring) is the core product and is unaffected.
+  channel OFF refuses new listening creates for that channel. Social-Signals
+  (LinkedIn person monitoring) is **not entitled on this account** — every
+  `/v1/social-signals/*` call returns HTTP 403 "Signals is not enabled for this
+  workspace" (a STARTER-plan entitlement, verified live 2026-09-02, not a
+  credit problem and not fixable in code), so that stream contributes nothing
+  regardless of the toggles. What Trigify does contribute is the three
+  knowledge-spine sources in `outreach-engine/knowledge/trigify_intel.py`
+  (`trigify_prospect_activity`, `trigify_company_intel`,
+  `trigify_company_engagement`) — see `docs/trigify-setup.md`.
 - **Campaign prefs** — `signal_prefs {enabled, channels, signal_types}` on the campaign
   GET. `signal_branch.apply_campaign_prefs` downgrades a strong decision to
   monitor-only when `enabled=false` or the best signal's type is not in `signal_types`

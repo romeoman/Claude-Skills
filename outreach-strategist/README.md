@@ -22,7 +22,8 @@ The system runs human-gated, signal-led outbound. Concretely, it:
 - **Assembles SDR knowledge before a word of copy is written.** Eight
   per-contact sources via `context_spine.py`, plus market intelligence, the
   Reddit slice of it, podcasts, YouTube transcripts, Graph.one warm paths,
-  a voice corpus, and follow-up asset options via the `knowledge/` package.
+  Trigify prospect/company intelligence (three sources, §7.1), a voice corpus,
+  and follow-up asset options via the `knowledge/` package.
   All of it lands in one envelope key, `settings_json.sdr_context`
   (`outreach-engine/knowledge/__init__.py`).
 - **Gates every message before it can be staged.** Seven deterministic,
@@ -87,7 +88,8 @@ unclear`, with the matched rule recorded for audit.
                              context_spine.py      (8 per-contact sources)
                              knowledge/__init__.py (build_sdr_context)
                              knowledge/{mi_intel,podcasts,youtube,
-                                        warm_paths,voice,assets}.py
+                                        warm_paths,voice,assets,
+                                        trigify_intel}.py
                              content_library.py    (our published assets)
                                            │
                              writes settings_json.sdr_context
@@ -142,7 +144,8 @@ unclear`, with the matched rule recorded for audit.
         │                                          (person + domain, sticky)
         │                                          + Woodpecker blacklist
         │
-        └── every class ──► signal_notify.py ──► DISCORD (embed, in thread)
+        └── every class ──► signal_notify.py ──► DISCORD (embed, dated thread)
+                            category -> channel: config/notify-routing.yaml
 ```
 
 Copy evolution runs alongside: `copy_refresh.py` reads `sdr_context`, lints,
@@ -305,24 +308,24 @@ Environment variable **names** only. Never commit a value; the container gets
 them from its env, the host crons load the repo `.env` with a safe line parser
 (plain `source` breaks on values containing shell metacharacters).
 
-| Tool                                          | Used here for                                                                                                                                                                                                                                                                                                                                                               | Env var(s)                                                                                    | Required?                                                        | If absent                                                                                                                                                   |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Woodpecker**                                | email sequences, DRAFT staging, the email inbox poller, prospect blacklist writes, step-version PATCH for copy refresh                                                                                                                                                                                                                                                      | `WOODPECKER_API_KEY`, `WOODPECKER_FIRM_ID`                                                    | **Required** for any staging, the email watcher and copy refresh | No staging, no email inbox watch, no copy apply. `record_objection --remote` reports the failure instead of reaching the API.                               |
-| **LinkUp**                                    | LinkedIn DM + InMail inbox. Real endpoint is `POST https://api.linkupapi.com/v2/messages` with `action: list_inbox` / `get_conversation` / `check_invitation`; `sales_nav: true` selects the InMail store. Guessed paths (`/v2/inbox/list`, `/v2/inbox`, `/v2/message`) return 404 `INVALID_ACCOUNT`. Webhooks: `POST /v2/webhooks`, event `message_received`, HMAC-SHA256. | `LINKUP_API_KEY`, `LINKUP_ACCOUNT_ID`, `LINKUP_WEBHOOK_SECRET`                                | Required for the LinkedIn watcher                                | LinkedIn replies are invisible to the system.                                                                                                               |
-| **Maton**                                     | Gmail read, scoped to Maton-draft threads only                                                                                                                                                                                                                                                                                                                              | `MATON_API_KEY`                                                                               | Required for the Gmail watcher                                   | Direct-to-Romeo replies are not watched.                                                                                                                    |
-| **HubSpot**                                   | source and curated lists, CRM facts in the spine, unsubscribe writes                                                                                                                                                                                                                                                                                                        | `HUBSPOT_ACCESS_TOKEN`                                                                        | Required for HubSpot-cohort builds                               | No list build, no CRM facts; the spine reports the source `unavailable` with a reason.                                                                      |
-| **Trigify**                                   | social buying signals, job-change monitors                                                                                                                                                                                                                                                                                                                                  | `TRIGIFY_API_KEY`, `TRIGIFY_API_BASE`, `TRIGIFY_WEBHOOK_TOKEN`                                | Optional                                                         | No social signals. Everything else still runs.                                                                                                              |
-| **Albacross**                                 | website-visitor signals via a webhook receiver                                                                                                                                                                                                                                                                                                                              | `ALBACROSS_WEBHOOK_TOKEN`                                                                     | Optional                                                         | No web-visit signals.                                                                                                                                       |
-| **Exa**                                       | company/topic research (campaign-level)                                                                                                                                                                                                                                                                                                                                     | `EXA_API_KEY`                                                                                 | Optional                                                         | Research facts drop out of the spine with an honest `unavailable` row.                                                                                      |
-| **Apollo / HarvestAPI / Icypeas / Emailable** | enrichment, verification, the voice corpus snapshot                                                                                                                                                                                                                                                                                                                         | `APOLLO_API_KEY`, `HARVEST_API_KEY` (others via their own skills)                             | Optional                                                         | Enrichment and voice reference degrade to `unavailable`.                                                                                                    |
-| **Graph.one via Mission Control**             | warm paths / relationship intelligence                                                                                                                                                                                                                                                                                                                                      | `MC_BASE_URL`, `OUTREACH_WRITE_SECRET` (header `x-outreach-secret`)                           | Required for build/stage routing through MC                      | `GET /api/outreach/relationships/status` is preflight row 2b. When the cache is stale or degraded, **zero paths is not evidence that no warm path exists**. |
-| **PodcastIndex**                              | campaign-level podcast knowledge                                                                                                                                                                                                                                                                                                                                            | `PODCASTINDEX_API_KEY`, `PODCASTINDEX_API_SECRET`                                             | Optional                                                         | `podcasts` source reports `unavailable`.                                                                                                                    |
-| **Zernio (YouTube transcripts)**              | transcript knowledge                                                                                                                                                                                                                                                                                                                                                        | `ZERNIO_API_KEY`                                                                              | Optional                                                         | **Currently `disabled` in config**: the Tools API returned HTTP 403 "only available on paid plans" while the key itself authenticates.                      |
-| **Memelord**                                  | follow-up asset options (`--category trending`)                                                                                                                                                                                                                                                                                                                             | `MEMELORD_API_KEY`                                                                            | Optional                                                         | `follow_up_assets` is empty. Note these are always `auto_insert: false`.                                                                                    |
-| **Reddit**                                    | the Reddit slice of market intelligence                                                                                                                                                                                                                                                                                                                                     | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`                                                    | Optional                                                         | The Data API is not available to us; expect zero rows and a `collector_notes` entry saying so.                                                              |
-| **crawl4ai**                                  | fetching public event/speaker pages for list sourcing                                                                                                                                                                                                                                                                                                                       | `CRAWL4AI_API_TOKEN`, `CRAWL4AI_BASE_URL`                                                     | Optional                                                         | Use `exa-api` for the same route.                                                                                                                           |
-| **Discord bot**                               | the strategist channel, reply escalation, the daily nudge and weekly report                                                                                                                                                                                                                                                                                                 | `DISCORD_BOT_TOKEN`, `DISCORD_BD_CHANNEL_ID`, `SALES_OPS_DISCORD_CHANNEL_ID`                  | Required for the human interface                                 | The system still gates and stages; you just do not hear about it.                                                                                           |
-| **OpenClaw gateway**                          | runs the skill; every caller must name its agent                                                                                                                                                                                                                                                                                                                            | gateway config `openclaw.json`; callers send `x-openclaw-agent-id` or address `openclaw/<id>` | **Required**                                                     | OpenClaw 2026.8.x with explicit agent ownership returns HTTP 400 "no explicit owner" to any caller that does not name an agent.                             |
+| Tool                                          | Used here for                                                                                                                                                                                                                                                                                                                                                               | Env var(s)                                                                                                                     | Required?                                                        | If absent                                                                                                                                                      |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Woodpecker**                                | email sequences, DRAFT staging, the email inbox poller, prospect blacklist writes, step-version PATCH for copy refresh                                                                                                                                                                                                                                                      | `WOODPECKER_API_KEY`, `WOODPECKER_FIRM_ID`                                                                                     | **Required** for any staging, the email watcher and copy refresh | No staging, no email inbox watch, no copy apply. `record_objection --remote` reports the failure instead of reaching the API.                                  |
+| **LinkUp**                                    | LinkedIn DM + InMail inbox. Real endpoint is `POST https://api.linkupapi.com/v2/messages` with `action: list_inbox` / `get_conversation` / `check_invitation`; `sales_nav: true` selects the InMail store. Guessed paths (`/v2/inbox/list`, `/v2/inbox`, `/v2/message`) return 404 `INVALID_ACCOUNT`. Webhooks: `POST /v2/webhooks`, event `message_received`, HMAC-SHA256. | `LINKUP_API_KEY`, `LINKUP_ACCOUNT_ID`, `LINKUP_WEBHOOK_SECRET`                                                                 | Required for the LinkedIn watcher                                | LinkedIn replies are invisible to the system.                                                                                                                  |
+| **Maton**                                     | Gmail read, scoped to Maton-draft threads only                                                                                                                                                                                                                                                                                                                              | `MATON_API_KEY`                                                                                                                | Required for the Gmail watcher                                   | Direct-to-Romeo replies are not watched.                                                                                                                       |
+| **HubSpot**                                   | source and curated lists, CRM facts in the spine, unsubscribe writes                                                                                                                                                                                                                                                                                                        | `HUBSPOT_ACCESS_TOKEN`                                                                                                         | Required for HubSpot-cohort builds                               | No list build, no CRM facts; the spine reports the source `unavailable` with a reason.                                                                         |
+| **Trigify**                                   | prospect + company intelligence in the knowledge spine (three sources, §7.1), listening monitors. **Social Signals — the always-on buying-intent feed — is not entitled on this account**; see the entitlement table below.                                                                                                                                                 | `TRIGIFY_API_KEY`, `TRIGIFY_API_BASE`, `TRIGIFY_WEBHOOK_TOKEN`, `TRIGIFY_CREDIT_BUDGET_DAILY`, `TRIGIFY_CREDIT_BUDGET_MONTHLY` | Optional                                                         | The three `trigify_*` sources report `unavailable` with a reason. An **unset** budget never authorises a spend — the two paid sources fail closed.             |
+| **Albacross**                                 | website-visitor signals via a webhook receiver                                                                                                                                                                                                                                                                                                                              | `ALBACROSS_WEBHOOK_TOKEN`                                                                                                      | Optional                                                         | No web-visit signals.                                                                                                                                          |
+| **Exa**                                       | company/topic research (campaign-level)                                                                                                                                                                                                                                                                                                                                     | `EXA_API_KEY`                                                                                                                  | Optional                                                         | Research facts drop out of the spine with an honest `unavailable` row.                                                                                         |
+| **Apollo / HarvestAPI / Icypeas / Emailable** | enrichment, verification, the voice corpus snapshot                                                                                                                                                                                                                                                                                                                         | `APOLLO_API_KEY`, `HARVEST_API_KEY` (others via their own skills)                                                              | Optional                                                         | Enrichment and voice reference degrade to `unavailable`.                                                                                                       |
+| **Graph.one via Mission Control**             | warm paths / relationship intelligence                                                                                                                                                                                                                                                                                                                                      | `MC_BASE_URL`, `OUTREACH_WRITE_SECRET` (header `x-outreach-secret`)                                                            | Required for build/stage routing through MC                      | `GET /api/outreach/relationships/status` is preflight row 2b. When the cache is stale or degraded, **zero paths is not evidence that no warm path exists**.    |
+| **PodcastIndex**                              | campaign-level podcast knowledge                                                                                                                                                                                                                                                                                                                                            | `PODCASTINDEX_API_KEY`, `PODCASTINDEX_API_SECRET`                                                                              | Optional                                                         | `podcasts` source reports `unavailable`.                                                                                                                       |
+| **Zernio (YouTube transcripts)**              | transcript knowledge                                                                                                                                                                                                                                                                                                                                                        | `ZERNIO_API_KEY`                                                                                                               | Optional                                                         | **Currently `disabled` in config**: the Tools API returned HTTP 403 "only available on paid plans" while the key itself authenticates.                         |
+| **Memelord**                                  | follow-up asset options (`--category trending`)                                                                                                                                                                                                                                                                                                                             | `MEMELORD_API_KEY`                                                                                                             | Optional                                                         | `follow_up_assets` is empty. Note these are always `auto_insert: false`.                                                                                       |
+| **Reddit**                                    | the Reddit slice of market intelligence                                                                                                                                                                                                                                                                                                                                     | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`                                                                                     | Optional                                                         | The Data API is not available to us; expect zero rows and a `collector_notes` entry saying so.                                                                 |
+| **crawl4ai**                                  | fetching public event/speaker pages for list sourcing                                                                                                                                                                                                                                                                                                                       | `CRAWL4AI_API_TOKEN`, `CRAWL4AI_BASE_URL`                                                                                      | Optional                                                         | Use `exa-api` for the same route.                                                                                                                              |
+| **Discord bot**                               | the strategist channel, reply escalation, the daily nudge and weekly report                                                                                                                                                                                                                                                                                                 | `DISCORD_BOT_TOKEN`, `OUTREACH_DISCORD_CHANNEL_ID`, `DISCORD_BD_CHANNEL_ID`, `SALES_OPS_DISCORD_CHANNEL_ID`                    | Required for the human interface                                 | The system still gates and stages; you just do not hear about it. With `OUTREACH_DISCORD_CHANNEL_ID` unset each category fails soft to its old channel (§5.4). |
+| **OpenClaw gateway**                          | runs the skill; every caller must name its agent                                                                                                                                                                                                                                                                                                                            | gateway config `openclaw.json`; callers send `x-openclaw-agent-id` or address `openclaw/<id>`                                  | **Required**                                                     | OpenClaw 2026.8.x with explicit agent ownership returns HTTP 400 "no explicit owner" to any caller that does not name an agent.                                |
 
 **Credit costs verified from the vendor contract (LinkUp, docs
 `docs.linkupapi.com/api-reference/v2`, checked live 2026-09-02):**
@@ -331,6 +334,51 @@ them from its env, the host crons load the repo `.env` with a safe line parser
 - `send` — 1 credit.
 - `check_invitation` — 1 credit.
 - webhook monitoring — approximately 10 credits/day.
+
+**Trigify: what this plan is entitled to, and what each call costs.** Measured
+live against the real STARTER-plan account on 2026-09-02 across the whole
+133-endpoint surface. The table is recorded in `trigify_client.py`'s module
+docstring, which is the file to read before changing any `max_items`. The
+OpenAPI spec is served at **`https://api.trigify.io/docs`** — not
+`/openapi.json`.
+
+**Entitled:**
+
+| Endpoint                                     | Client method                     | Cost                                                                                                      |
+| -------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `POST /v1/profile/enrich`                    | `enrich_profile`                  | 1 credit/call                                                                                             |
+| `POST /v1/profile/posts`                     | `get_profile_posts`               | charged **per result**, and the endpoint has **no `limit` parameter** — one live call cost **50 credits** |
+| `POST /v1/company/enrich`                    | `enrich_company`                  | 1 credit/call                                                                                             |
+| `POST /v1/company/posts`                     | `get_company_posts`               | per result; `limit` **is** supported, so `max_items` caps spend 1:1                                       |
+| `POST /v1/company/comments`                  | `get_company_comments`            | per result; `limit` supported (max 50)                                                                    |
+| `POST /v1/post/by-url`                       | `get_post_by_url`                 | 1 credit/call                                                                                             |
+| `POST /v1/searches/linkedin/profile/preview` | `preview_linkedin_profile_search` | **free** — zero credits, zero search quota; capped to `time_frame="past-week"` on STARTER                 |
+| `POST /v1/searches/linkedin/posts/preview`   | `preview_linkedin_posts_search`   | **free**, same past-week cap                                                                              |
+
+**Not entitled (HTTP 403, recorded honestly, never worked around):**
+`social-signals/*` ("Signals is not enabled for this workspace"),
+`social/mapping` (Enterprise "Keyword Engagement"), `discover/creators`,
+`post/engagements`, `post/comments` and `post/comments/replies` (Max and
+above), `profile/engagement/*`, `topics/*` (Enterprise or Custom). Note the
+asymmetry: `company/comments` (comments on a **company page's** post) is
+entitled; `post/comments` (comments on a **person's** post) is not — different
+endpoints.
+
+Because these reads spend real credits, the six credit-spending methods sit
+behind the same `confirm=True` write guard as a monitor create, and every
+confirmed spend logs a line to stderr. The two paid knowledge sources are
+budget-gated fail-closed against `TRIGIFY_CREDIT_BUDGET_DAILY` /
+`TRIGIFY_CREDIT_BUDGET_MONTHLY` on their own ledger action, so a monitor create
+and a knowledge-adapter spend cannot borrow each other's headroom. The deployed
+values in `.env.example` are **50/day and 1500/month** against the plan's
+4000-credit monthly limit; keep monthly ≥ 30× daily or the daily figure is
+inert.
+
+**`GET /v1/credits/balance` is not a spend tracker.** It read the same
+`{"used": "0", "remaining": "4000"}` before and after the session's real,
+confirmed spends (69 credits). Use `GET /v1/usage` — its
+`data.credits.by_feature` map updates within one poll and is the authoritative
+ledger.
 
 Other vendors' per-call costs are not documented in this repo and are
 deliberately not asserted here.
@@ -406,6 +454,54 @@ conversation inside the auto-created thread rather than the channel root, and
 reply escalations from the inbox watchers arrive the same way via
 `signal_notify.py`.
 
+### 5.4 Where the autopilot reports, and how that routing is configured
+
+The autopilot reports into **this same room** — channel `1544045843483594772`,
+read from `OUTREACH_DISCORD_CHANNEL_ID` — as Discord **embeds**, in a **dated
+thread per category**. `signal_notify.py` creates the thread once per Warsaw
+calendar day, named `"<prefix> · <YYYY-MM-DD>"`, and reuses it for every event
+that day; a new day rolls to a fresh thread.
+
+The category → channel table is config, not code:
+**`config/notify-routing.yaml`**, read fresh on every call with the repo's own
+stdlib YAML-subset parser (no PyYAML — the file is read inside the container
+too). A missing file, a malformed line, a duplicate category, or a category
+missing a required field raises `NotifyRoutingConfigError` **loud**; an
+unrecognised category passed to `notify()` is a loud `ValueError`. There is no
+silent fallback to a made-up route.
+
+| Category     | Thread prefix      | Primary channel env            | Fallback when unset            |
+| ------------ | ------------------ | ------------------------------ | ------------------------------ |
+| `replies`    | `Replies`          | `OUTREACH_DISCORD_CHANNEL_ID`  | `DISCORD_BD_CHANNEL_ID`        |
+| `objections` | `Objections`       | `OUTREACH_DISCORD_CHANNEL_ID`  | `SALES_OPS_DISCORD_CHANNEL_ID` |
+| `copy`       | `Copy Proposals`   | `OUTREACH_DISCORD_CHANNEL_ID`  | `DISCORD_BD_CHANNEL_ID`        |
+| `alerts`     | `Alerts`           | `OUTREACH_DISCORD_CHANNEL_ID`  | `SALES_OPS_DISCORD_CHANNEL_ID` |
+| `signals`    | `Trigify Signals`  | `DISCORD_BD_CHANNEL_ID`        | (same)                         |
+| `research`   | `Trigify Research` | `DISCORD_BD_CHANNEL_ID`        | (same)                         |
+| `ops`        | `Trigify Ops`      | `SALES_OPS_DISCORD_CHANNEL_ID` | (same)                         |
+
+The four autopilot categories are new; the three legacy Trigify categories keep
+the routing they always had — only the **location** of the table moved out of a
+hardcoded Python dict. The fallback is fail-soft and logged, never silent, so a
+deployment that has not yet picked up the new env var still delivers. `ops`,
+`alerts` and `objections` render in the red "critical" embed colour; everything
+else in BD blue.
+
+Emitters on this table: the three inbox watchers (`replies`; objections get
+their own category and thread; watcher failures go to `alerts`),
+`copy_refresh.py` proposals (`copy`), and the webhook receiver's loud alerts.
+`scripts/outreach-report-cron.sh` prefers `OUTREACH_REPORT_CHANNEL`, then the
+container's `OUTREACH_DISCORD_CHANNEL_ID`, then the BD channel.
+
+**Deploying the env var needs a container RECREATE, not a restart.**
+`docker compose up -d openclaw` — a plain `docker restart` reuses the
+environment baked in at container creation and the new variable will not be
+visible, so the routing silently keeps using the fallback. The same applies to
+the two cron wrappers, which grep-export an env allowlist:
+`tests/test_cron_notify_env_wiring.py` derives the required names from the
+routing config, so a wrapper missing `DISCORD_BOT_TOKEN` or the channel var
+fails the suite instead of degrading quietly to the file queue.
+
 ---
 
 ## 6. The flow, end to end
@@ -416,6 +512,12 @@ reply escalations from the inbox watchers arrive the same way via
    `event_sourcing.py`.
    _Artefact:_ a row in the signal store (`signal_store.py`), scored by
    `signal_score.py` / `signal_ranking.py`.
+   _Caveat:_ the poller's Social-Signals leg
+   (`client.get_social_signals_feed`) returns **403 on this plan** — that
+   stream produces nothing until the entitlement changes. Its listening-search
+   leg (`client.get_search_results`) is unaffected. Trigify's contribution to a
+   build today comes from the three knowledge sources in §7.1, not from the
+   buying-intent feed.
 
 2. **Preflight.** The strategist runs the 9-row checklist and posts the PASS/FAIL
    table in the Discord thread. _Artefact:_ a `type=decision` event in
@@ -441,6 +543,21 @@ reply escalations from the inbox watchers arrive the same way via
    deterministic QA merge and **before** the Mission Control upsert. The same
    function is called by `signal_woodpecker.gate_envelope` on the
    signal→prospect-add path with `action="stage"`.
+
+   **Gate 0 — cohort dedupe.** Before the per-contact loop,
+   `review_envelope` groups the whole cohort by
+   `presend_gates.normalize_email()`. Two entries that collapse to the same
+   human — `dup@x.example` and `DUP@x.example`, a plus-tag, a Gmail-dot
+   variant, an IDN/punycode spelling of the same domain — are a **build
+   defect**: each would be gated and staged as an independent contact, so one
+   person could receive two independent first-touch sequences. This is
+   deliberately **not** a silent dedupe-and-continue: it fails closed with a
+   `cohort_dedupe:` reason naming every raw form and every contact id
+   involved, so a human fixes the cohort rather than having it merged out from
+   under them. Genuinely different people do not collapse. Contacts with a
+   missing or malformed email are skipped here — that case is already reported
+   by the malformed-email check and must not also be reported as a spurious
+   duplicate.
 
    **Wired gates (7):**
 
@@ -492,6 +609,21 @@ reply escalations from the inbox watchers arrive the same way via
    _Artefact:_ `$OUTREACH_RUNS_DIR/_signal_touches/<key>.json`, moved to
    `_consumed/` after processing. These files are also the enrolment evidence
    the inbox allowlist reads.
+
+   **The creation-time check now agrees with the send-time one.**
+   `validate_campaign.py` — the pre-create validator the woodpecker skill tells
+   a human to run — used to check only the `settings.gdpr_unsubscribe` /
+   `settings.list_unsubscribe` booleans. Per Woodpecker's own documentation
+   those flags do nothing without the `{{UNSUBSCRIBE}}` snippet in the body or
+   the account signature, so a hand-built body with the flags on and no visible
+   tag got a green light at creation on copy that `unsubscribe_verify.py`
+   correctly blocks at every later build/stage. The validator now calls
+   `unsubscribe_verify`'s own `_email_versions` / `_tag_visible` — one source of
+   truth, not two parsers that can drift — and fails closed on a `SENDER`
+   signature delegation it cannot confirm without the live API, pointing at
+   `unsubscribe_verify.py --verify` as the check that can. A broken checkout
+   that cannot import `unsubscribe_verify` is a loud problem, never a skipped
+   check.
 
 8. **Human approves and activates** in Mission Control / the Woodpecker UI.
    Nothing before this point has sent anything.
@@ -576,6 +708,36 @@ untrusted`. Invariants the collector enforces: a failing source contributes
 **zero** facts and a stated reason — never a placeholder, a guessed URL, or a
 "probably"; collection never raises, because any adapter exception becomes an
 `unavailable` row.
+
+**Three Trigify sources joined `FACT_SOURCES` on 2026-09-02**
+(`knowledge/trigify_intel.py`), each appearing in `source_status` as
+`wired` / `unavailable` / `disabled` with a real reason like every other
+source. They exist because the Social-Signals buying-intent feed is not
+entitled on this plan (§4); they are its read-time replacement, not the same
+thing.
+
+| `source_status.source`       | Cost                                                       | What the facts are                                                                                                                                                     |
+| ---------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `trigify_prospect_activity`  | **free** (the dry-run preview endpoint)                    | the prospect's own recent LinkedIn posts, `trust: primary`. `time_frame` is config (`past-week` on this plan) because it is a real plan boundary, not a code constant. |
+| `trigify_company_intel`      | paid: 1 credit + per-result                                | the company's firmographics and recent posts/launches/hiring, `trust: primary`. `max_items` is sent as the wire `limit`, so it caps spend 1:1 with results.            |
+| `trigify_company_engagement` | paid: per-result on two calls (anchor post, then comments) | who publicly commented on the company's most recent post, `trust: derived`.                                                                                            |
+
+**`trigify_company_engagement` is a PROXY, and the copy must treat it as one.**
+It is public engagement on the company's **own** content — it is **not** a
+mutual-connection warm path. Real warm paths come from `warm_paths.py` /
+Graph.one and nowhere else. Every fact this adapter emits carries the caveat in
+its own `value` string ("NOT a confirmed mutual connection, an
+account-engagement signal only"), and its `unavailable` reason says the same,
+so a copywriter reading only the envelope cannot overstate it. It exists
+because `/v1/social/mapping`, `/v1/post/engagements` and `/v1/post/comments` —
+the endpoints that would give a real engagement graph — all 403 on this plan.
+
+Both paid sources are budget-checked **before** the call and fail closed:
+an unset budget never authorises a spend, and an unreachable signal store
+(no `OUTREACH_RUNS_DIR` / `OUTREACH_SIGNAL_DB`) also fails closed, because
+without it the budget ledger cannot be trusted at all. `trigify_prospect_activity`
+is free and never touches the budget ledger; it degrades only on an
+entitlement/transport failure or an empty result.
 
 ### 7.2 The suppression ledger
 
@@ -902,7 +1064,33 @@ The rollback refuses if the record shows no applied change, if the campaign is
 no longer in an allowed (DRAFT) status, or if the campaign is not one of the
 configured ids. It writes its own `copy_refresh_rollback` record.
 
-### 8.4 Publishing a change to this skill
+### 8.4 Staging a real Woodpecker add without posting to Discord
+
+`signal_woodpecker.process_build_output()` used to call `queue_bd_embed()`
+unconditionally on its success path, and `dry_run=True` skips the Woodpecker
+add entirely — so there was no way to stage a real add and inspect it without
+posting into a live, human-monitored Discord channel. (That is exactly what
+made the 2026-09-02 campaign rehearsal drop a synthetic signal into
+`#business-development`.)
+
+It now takes a `notify` parameter, default `True`, so no existing caller
+changes behaviour:
+
+```python
+process_build_output(store, record, notify=False)   # real add, no Discord embed
+# outcome["bd_embed"] is then None
+```
+
+On top of that sits the env kill switch `OUTREACH_SIGNAL_WOODPECKER_NOTIFY`
+(same convention as `webhook_receiver.py`'s `OUTREACH_WEBHOOK_NOTIFY_ALL`).
+Setting it to `0` / `false` / `no` suppresses the embed. It can only ever
+**suppress**: a caller that explicitly passed `notify=False` is honoured
+unconditionally, and no env value can re-enable a notification the caller
+turned off. The Woodpecker add, the ledger write and the exactly-once
+semantics are unchanged either way — this switch governs the Discord side
+effect only, never whether the prospect is added.
+
+### 8.5 Publishing a change to this skill
 
 The **container workspace copy is the source of truth** for the sync:
 `scripts/outreach-skills-sync.sh` stages
@@ -921,6 +1109,20 @@ Two safety layers you will see in the log: the **content-shrink guard**
 `SYNC_ALLOW_SHRINK=1` if the deletion is intended) and the **public redaction
 floor** (a fail-closed allowlist scanned on the copied public tree before any
 git write; a violation refuses the publish entirely).
+
+**A guard that always fires is not a guard.** Until 2026-09-02 the shrink
+guard walked the destination and flagged `subskills/<name>.SKILL.md` as
+"absent on the container side" — which it structurally always is: `$SRC` never
+contains a `subskills/` directory, because those four files are written into
+the **destination** by the script's own post-rsync `SYNC_SUBSKILLS` loop, which
+runs after the guard. Both public mirrors therefore reported FAILED and paged
+Discord on every 30-minute tick (40 occurrences in the log). A path the script
+materialises itself is now exempt from the "absent" branch only, derived from
+`SYNC_SUBSKILLS` in config rather than a hardcoded list, and still carries an
+`--exclude` filter so `--delete` can never remove it. Every other protection is
+untouched: genuine shrink, same-count rewrite, salami drift, byte and
+non-blank-line checks, and a genuinely absent protected path the script does
+**not** write all still fail and page.
 
 ---
 
@@ -994,13 +1196,24 @@ Stated plainly because a hidden limit is worse than a known one.
    doc-summariser invented `/v2/inbox/list`; it does not exist.
 3. **LinkUp webhook retry policy and hosted-mode SSE are unexercised.** Verify
    on first registration. **Unverified** until then.
-4. **Trigify is pointed at test profiles.** The only live monitor watches three
-   wet-test profiles; treat "no Trigify signal" as "not measured", not as "no
-   signal exists".
-5. **The hooks tunnel has a local-DNS issue.** The webhook receiver is
-   reachable, but local name resolution to the tunnel host is unreliable from
-   some layouts; the polling watchers are the designed backstop precisely
-   because push cannot be the only path.
+4. **Trigify Social Signals, social mapping, topics and post engagements are
+   plan-gated — not broken, and not a credit problem.** The account has credit
+   (4000/month limit). Every `/v1/social-signals/*` call returns HTTP 403
+   "Signals is not enabled for this workspace"; `social/mapping`,
+   `discover/creators`, `post/engagements`, `post/comments(+replies)` and
+   `profile/engagement/*` are likewise 403, and `topics/*` needs Enterprise. No
+   code change can open any of them, and none is retried or worked around. The
+   entitled surface is wired instead (§4, §7.1). Consequences to keep in mind:
+   the buying-intent feed contributes nothing, so "no Trigify signal" still
+   means "not measured"; and `trigify_company_engagement` is an
+   account-engagement **proxy**, never evidence of a mutual connection.
+5. **`hooks.man.digital` does not resolve usefully from every internal
+   layout.** Vendors POSTing to the tunnel reach the receiver; a local lookup
+   from the Mac returns edge addresses that then time out, so a failed local
+   `curl` is not evidence the receiver is down. The polling watchers are the
+   designed backstop precisely because push cannot be the only path. The DNS
+   behaviour itself is an operator observation, **not measured from this
+   checkout**.
 6. **macOS needs bash 4 for some suites.** `test_outreach_sync_protect.sh` is
    100/100 on the VM and fails on the Mac on a macOS-only double-logging quirk;
    `run-all-harnesses.sh` lists it as skipped **with the reason** rather than
@@ -1074,15 +1287,29 @@ the next sync tick.
 
 ---
 
-**Verified on 2026-09-02.** What was actually run on the Mac checkout at
-`/Users/romeoman/openclaw-infra` while writing this file:
+**Verified on 2026-09-03.** What was re-run on the Mac checkout at
+`/Users/romeoman/openclaw-infra` for this revision (§4 Trigify entitlement,
+§5.4 notify routing, §6 cohort dedupe + creation-time unsubscribe check, §7.1
+Trigify sources, §8.4 `notify`, §8.5 sync guard, §10):
 
-- `python3 scripts/tests/objection_e2e_test.py` → `RESULT: 42/42 scored checks passed`
+- `python3.13 -m pytest outreach-engine/tests/{test_cohort_dedupe,test_notify_routing,test_signal_woodpecker,test_knowledge_trigify_intel,test_trigify_client,test_cron_notify_env_wiring}.py` → **111 passed**
+- `bash scripts/tests/sync_shrink_guard_test.sh` → **34 passed, 0 failed**
+- `bash outreach-engine/tests/test_outreach_report_cron.sh` → **ALL PASS** (4 cases)
+- `python3.13 scripts/tests/objection_e2e_test.py` → `RESULT: 42/42 scored checks passed` (0 documented findings)
+
+Carried over from the 2026-09-02 revision, not re-run here:
+
 - `python3 scripts/tests/dummy_pasted_list_test.py` → `20/20 checks passed at 2026-09-02T18:40:56+00:00`, "Nothing was sent, staged, activated, listed, or written to the kb."
 - `bash scripts/tests/run-all-harnesses.sh --list` → the 9-harness Mac manifest, plus the 3 harnesses it lists as skipped on this layout with their reasons
 - `sha256sum` comparison of `SKILL.md` and `LEARNINGS.md` between the repo copy
   and the container copy at
   `/home/node/.openclaw/workspace/skills/outreach-strategist/` → identical
+
+The container was deliberately **not** touched while writing this revision, so
+no in-container or live-vendor call was made for it. The Trigify entitlement
+and cost figures in §4 are the live 2026-09-02 measurements recorded in
+`outreach-engine/trigify_client.py`'s module docstring and
+`docs/trigify-setup.md`; they were read out of those files, not re-measured.
 
 Every schema in §7, every gate in §6, every env var name in §4, and every cron
 row in §8 was read out of the module, config, or script that owns it. The
