@@ -383,6 +383,21 @@ ledger.
 Other vendors' per-call costs are not documented in this repo and are
 deliberately not asserted here.
 
+**The four knowledge sources added on 2026-09-03 introduce NO new vendor and no
+new credential** — checked against this table rather than assumed:
+
+| Source             | Vendor it reuses                                                   | Row above                   |
+| ------------------ | ------------------------------------------------------------------ | --------------------------- |
+| `industry_reading` | Exa, via the existing `research_exa.py` client                     | **Exa** (`EXA_API_KEY`)     |
+| `events`           | Exa; optional, default-OFF Trigify `/v1/company/posts` half        | **Exa**, **Trigify**        |
+| `job_changes`      | HarvestAPI `/linkedin/profile`, same auth the linkedin-engine uses | **Apollo / HarvestAPI / …** |
+| `team_intel`       | Granola via the Maton gateway                                      | **Maton** (`MATON_API_KEY`) |
+
+`industry_reading` and `events` prefer `MATON_API_KEY` (Maton gateway) and fall
+back to `EXA_API_KEY` (Exa direct) — the same order `research_exa.py` already
+uses. Neither set → `unavailable("credentials absent …")`, never a crash and
+never an attempted call.
+
 ---
 
 ## 5. Using it in OpenClaw from the `#outreach-strategist` channel
@@ -738,6 +753,97 @@ an unset budget never authorises a spend, and an unreachable signal store
 without it the budget ledger cannot be trusted at all. `trigify_prospect_activity`
 is free and never touches the budget ledger; it degrades only on an
 entitlement/transport failure or an empty result.
+
+**Four more sources joined on 2026-09-03**, taking `knowledge.collect()` to
+**14**. Each obeys the same contract as every source above — zero facts and a
+stated reason on failure, an honest `source_status` row, never an invented
+fact or URL — and each is bound to a context dimension in
+`config/context-dimensions.yaml`, so the registry-driven completeness harness
+(`scripts/tests/context_join_test.py`) fails until a new source is either
+wired or explicitly marked unavailable-with-reason. That mechanism, not a
+hand-maintained list, is what stops this table going stale.
+
+| `source_status.source` | Config block              | Ships          | What the facts are                                                                     |
+| ---------------------- | ------------------------- | -------------- | -------------------------------------------------------------------------------------- |
+| `industry_reading`     | `source_industry_reading` | `enabled`      | Substack posts and named industry articles the campaign's market is currently reading  |
+| `events`               | `source_events`           | `enabled`      | webinars, conferences and speaking slots the prospect or their company runs/appears at |
+| `job_changes`          | `source_job_changes`      | `enabled`      | a real, dated title/company change, diffed against `contact_snapshots`                 |
+| `team_intel`           | `source_team_intel`       | **`disabled`** | short, non-attributed summaries of what our own team learned on calls (Granola)        |
+
+**`industry_reading`** searches on campaign-level terms only (niche / offer /
+segment / topics) — **never the prospect's own name**. A campaign with none of
+those set makes no call at all. Every item must carry a real citation URL AND a
+real date (Exa's `publishedDate`); an item missing either is dropped, the drop
+is counted in `meta.dropped_missing_citation` and logged, and if every candidate
+is dropped the source reports `unavailable` with the drop count in the reason
+rather than a bare "0 results". `allowed_domains` is a comma-separated
+allow-list (this file's parser has no nested list inside a source block) and
+`recency_days` bounds the window; an absent or `<= 0` `recency_days` means **no
+recency restriction**, never a guessed window.
+
+**`events` — getting the TENSE right is a correctness bug, not a cosmetic one.**
+"Sarah spoke at RevOps Live" and "Sarah is speaking at RevOps Live" are
+different claims and a competent SDR is never wrong about which. Two Exa
+searches are issued (a past window and a future window), but that is only to
+shape the query toward event-shaped content near the right time: the PAST vs
+UPCOMING wording always comes from parsing each result's **own** publish date
+against "now" at classification time, never from which bucket surfaced it. A
+result that appears in the "past" bucket but carries a future date still ships
+as "is speaking at". A date that fails to parse **drops the item** — it is never
+guessed into either bucket. The subject is built from the contact's own name
+and/or company; with neither present, no call is made.
+
+`events` also has a Trigify half that scans `/v1/company/posts` for event-shaped
+language. It is real, working, entitled code that reuses `trigify_intel.py`'s
+own credit-budget machinery (one definition of "an unset budget never authorises
+spend", not a second implementation to drift). It ships
+`trigify_company_posts_enabled: false` **purely on cost grounds** — enabling it
+issues a second paid, per-result-charged call to the same endpoint in the same
+envelope for substantially overlapping information. **This is a config decision,
+not an entitlement gap**, and it is not the Social-Signals 403 — do not conflate
+the two.
+
+**`job_changes` replaces a capability that is gone by decision.** Trigify
+Signals — which would have included job-change alerts — became unentitled on
+2026-08-12 (HTTP 403, a plan cutoff, not a credits problem). This source is the
+deliberate read-time replacement: refresh title/company via HarvestAPI, diff
+against `contact_snapshots`, emit **only** on a real, dated change. Do not
+re-litigate re-wiring Trigify Signals as "the fix". Two invariants: a **first
+sighting is never a change** (it reports `unavailable` — nothing to compare
+against yet — rather than a fabricated "changed"), and **a vendor failure never
+overwrites good history** — every failure path returns before the single call
+that writes the snapshot store, leaving it byte-for-byte as it was.
+
+**`team_intel` ships DISABLED, and confidentiality is the whole reason.**
+Granola's natural-language query can return a blended answer covering several
+accounts at once. Three independent layers stand between that and the copy:
+**exclusion, not redaction** (a note matching the `other_client_names` denylist
+is dropped whole — a half-redacted note can still identify someone); the
+existing **`pii_leak` gate run per item before anything ships**, where a blocked
+item is dropped rather than sanitised into a "safer" version; and items are
+**never attributed** — no meeting title, no date, no attendee name. Turning it
+on means populating `other_client_names` first; an empty denylist with the
+source enabled is the configuration to avoid.
+
+### 7.8 The absent-context policy (2026-09-03)
+
+`settings_json.sdr_context` is the join this whole section describes. What
+happens when it is **missing or entirely unavailable** is a config threshold,
+not a code constant, so it can be flipped either direction without a code
+change (`config/presend-gates.yaml`, enforced by
+`presend_gates.check_context_completeness`, called from `presend_review`):
+
+| Key                                         | Ships   | Meaning                                                   |
+| ------------------------------------------- | ------- | --------------------------------------------------------- |
+| `context_completeness_required`             | `true`  | the gate runs at all                                      |
+| `context_completeness_block_unattended`     | `true`  | **an unattended/autopilot build with no context BLOCKS**  |
+| `context_completeness_block_human_approved` | `false` | the same envelope under human approval FLAGS and proceeds |
+
+The asymmetry is the point: generic copy going out unattended is the exact
+outcome the knowledge layer exists to prevent, while a human who can see the
+flag is entitled to decide. An `sdr_context` that is present but whose every
+source is `unavailable` is treated as **empty, not populated** — a table full of
+honest failures is not knowledge.
 
 ### 7.2 The suppression ledger
 
@@ -1123,6 +1229,68 @@ materialises itself is now exempt from the "absent" branch only, derived from
 untouched: genuine shrink, same-count rewrite, salami drift, byte and
 non-blank-line checks, and a genuinely absent protected path the script does
 **not** write all still fail and page.
+
+### 8.6 The seed loop, and its kill switch
+
+The seed loop is a controlled canary: mailboxes and LinkedIn identities **we
+own**, enrolled in a real campaign, so the inbound half of the system
+(watcher → classifier → suppression → escalation → approval) can be proven on
+real traffic without ever touching a real prospect.
+
+**As shipped it is BUILT BUT UNARMED, by Romeo's decision on 2026-09-03**
+("build it, decide sending later"). `config/seed-loop.yaml` carries **no live
+allowlist**, and `seed_loop_ops.py status` exits non-zero. Nothing has been
+sent, and the four inbound acceptance criteria are recorded as NOT MET rather
+than quietly dropped — the system is **tested but unproven on real inbound**.
+
+Safety is structural, not procedural:
+
+- `seed_cohort.build_seed_cohort` **refuses the whole cohort** if any address
+  falls outside the configured allowlist — it names the offending address and
+  refuses, rather than silently filtering it out.
+- An **empty or missing allowlist blocks**. Absent is not permission.
+- Normalisation matches `presend_gates.normalize_email`, so plus-tags,
+  Gmail-dot variants and look-alike domains (`.co` vs `.com`) cannot sneak
+  through.
+- These files are **deliberately host-only and are NOT deployed into the
+  container** — they are absent from `ENGINE_FILES`/`ENGINE_CONFIGS` in
+  `scripts/outreach-deploy-skills.sh` and must stay absent:
+  `seed_cohort.py`, `seed_loop_ops.py`, `config/seed-loop.yaml`.
+  `seed_cohort` imports `campaign_contacts.py`, which the deploy script's own
+  header forbids shipping, and the config will eventually hold real mailbox
+  identities.
+
+**The kill switch.** One documented command. It halts seed enrolment **and**
+pauses every named campaign, then **re-reads each campaign's status to verify
+the pause actually took** — an HTTP 200 is not treated as proof, because a
+check that cannot fail is not a check:
+
+```bash
+# THE kill switch: halt enrolment AND pause the named campaign(s), verified
+python3 outreach-engine/seed_loop_ops.py kill \
+    --campaign <id> --reason "why" --actor "<your name>"
+
+# rehearse it without changing anything
+python3 outreach-engine/seed_loop_ops.py kill --dry-run \
+    --campaign <id> --reason "rehearsal" --actor "<your name>"
+
+python3 outreach-engine/seed_loop_ops.py halt --reason "why" --actor "<name>"
+python3 outreach-engine/seed_loop_ops.py status
+python3 outreach-engine/seed_loop_ops.py resume --actor "<name>"
+```
+
+`resume` **never un-pauses a campaign** — un-pausing is a deliberate, separate,
+human act in Woodpecker. Creating, activating or sending is structurally
+unreachable from this module, and cleanup is import-only with no CLI
+subcommand on purpose.
+
+Two operational facts worth knowing before using any of it: **deleting a
+Woodpecker campaign does NOT delete its prospects** (they survive and stay
+ACTIVE in the account, so cleanup must delete prospects separately via
+`DELETE /rest/v1/prospects?id=<pid>` and end on a residue assertion), and the
+v1 prospects filter params (`search=`, `email=`) are **ignored** by the API —
+it returns everything, so filter client-side. `GET /rest/v2/campaigns` (list)
+returns 405; read campaigns by id.
 
 ---
 
