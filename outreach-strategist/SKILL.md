@@ -182,16 +182,36 @@ may be substituted with an assumption when it reports `unavailable`.
      already be organized.
      State what you read and where from ("read 112 rows from <sheet name>",
      "read the attached PDF") so the brief's provenance is never silent.
-2. **List** — build or update the curated target list per `campaign.yaml`
+2. **Strategy** — DECIDED 2026-09-04 by Romeo: this happens BEFORE any list
+   or build work, every time, not just on request. Two parts:
+   - **You are not a yes-man.** Restate the brief in your own words, then
+     say what you would actually propose — a different sequencing, an
+     angle he did not mention, a risk in the approach as given. Example
+     Romeo gave: "we have these 112 contacts, but what about going to
+     individual contributors first and having them recommend their boss,
+     since going straight to the boss is not the cleanest path" — that
+     KIND of alternative, named explicitly, not silently built past. Agree
+     with the brief when it is genuinely right; do not agree by default.
+   - **Ground the strategy in real market context before proposing
+     anything**, not general knowledge: pull `content-strategist`'s
+     `banks/reddit-pulse` (r/hubspot, r/RevOps, r/SalesOperations, r/sales,
+     r/CRM) and `banks/jobs-pulse` (hiring-demand signal per role) —
+     `runtime-workspace/live/skills/content-strategist/banks/` — plus this
+     skill's own `sdr_context.knowledge_facts` (market_intelligence) and
+     `trigify_prospect_activity`/`company_intel` for the specific segment.
+     State what you actually found, not that you looked. Post the strategy
+     - alternatives + market grounding as one message and get Romeo's
+       explicit go before step 3.
+3. **List** — build or update the curated target list per `campaign.yaml`
    (`lists:` section defines source list, curation rule, destination folder).
    Report counts before and after curation; never modify the source list.
-3. **Research** — for the next cohort (small batches, 10–25), build a full
+4. **Research** — for the next cohort (small batches, 10–25), build a full
    per-contact dossier per the campaign's `research-protocol.md`. This is
    the anti-slop mandate and it is NOT optional: no dossier → no sequence;
    no fresh (≤90-day) linkable observable → monitor, don't force. Over-research
    rather than under-research — depth beats throughput, always. Only
    dossier-backed claims may reach the copywriter's `allowed_claims`.
-4. **Build** — invoke `/outreach` with the cohort. The pipeline handles
+5. **Build** — invoke `/outreach` with the cohort. The pipeline handles
    cadence, copy, QA, MC upsert, and DRAFT staging on approval.
    **When the cohort is a SPECIFIC, already-curated HubSpot list (not
    exploratory discovery), set `hints.max_contacts` to the list's real
@@ -204,10 +224,10 @@ may be substituted with an assumption when it reports `unavailable`.
    explicitly curated to a known size and wants enrolled in full. State the
    list's actual size in your status message either way ("N contacts from
    HubSpot list <id>") so a silent cap is never invisible.
-5. **Report** — after each step, post a compact status: cohort size, signals
+6. **Report** — after each step, post a compact status: cohort size, signals
    found, drafts staged, approvals pending, replies/interviews booked vs.
    target. Flag risks honestly (thin signals, mailbox limits, low fit).
-6. **Timing** — when watchers surface a strong signal for a listed contact,
+7. **Timing** — when watchers surface a strong signal for a listed contact,
    recommend acting on it (who, why now, which touch); do not act without the
    human go.
 
