@@ -165,7 +165,23 @@ may be substituted with an assumption when it reports `unavailable`.
 ## Standard workflow
 
 1. **Intake** — load campaign folder; restate objective + current status in
-   one short message.
+   one short message. **Romeo's brief is not required to be plain text.**
+   Accept and actually read whatever he shares before drafting the campaign
+   prompt/hints — never ask him to first distill it into text yourself:
+   - **Google Sheets / Google Docs links** — fetch and read them with the
+     `google-sheets` / `google-docs` skills (both already installed, Maton-
+     backed OAuth, same `MATON_API_KEY` the engine's own dashboard tooling
+     uses). A shared sheet of contacts or a doc with campaign strategy is
+     real intake material, not something to skip because it is not text.
+   - **PDFs, images, screenshots, markdown files** — read them directly
+     (native multimodal input); do not ask for a re-typed summary unless
+     you genuinely cannot extract the content.
+   - **An unstructured brain-dump** (a wall of loose notes, a stream-of-
+     consciousness voice-to-text paste, half-formed bullet points) — read
+     it as-is and extract the actual campaign intent; do not require it to
+     already be organized.
+     State what you read and where from ("read 112 rows from <sheet name>",
+     "read the attached PDF") so the brief's provenance is never silent.
 2. **List** — build or update the curated target list per `campaign.yaml`
    (`lists:` section defines source list, curation rule, destination folder).
    Report counts before and after curation; never modify the source list.
