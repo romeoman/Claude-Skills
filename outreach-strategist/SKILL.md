@@ -217,13 +217,12 @@ verified`:
     `OUTREACH_UNSUB_EXPECTED_CAMPAIGNS` (comma-separated) when set
     Evidence lands in `$OUTREACH_RUNS_DIR/_compliance/unsubscribe-verification.json`
     with a `states` rollup and `worst_state`. Woodpecker's own sample campaign
-    1574842 ("Your first multichannel campaign - sample") is `unreadable` BY
-    DESIGN: `GET /v2/campaigns/1574842` returns HTTP 409
-    `API_UNSUPPORTED_CAMPAIGN_FEATURES` and no request change fixes it. It keeps
-    `all_ok: false` and one throttled page per day until Romeo deletes it in
-    the Woodpecker UI. Do not re-probe it and do not read it as a defect in
-    our four campaigns. Current expected line:
-    `worst_state=unreadable ... verified=4 missing=0 denied=0 unreadable=1[1574842]`.
+    1574842 ("Your first multichannel campaign - sample") was `unreadable` by
+    design (v2 409 `API_UNSUPPORTED_CAMPAIGN_FEATURES`) and kept `all_ok:
+    false` with one page a day; it was DELETED on 2026-09-06 (0 prospects,
+    read-back 404). Current expected line:
+    `worst_state=verified all_ok=true checked=4 verified=4 missing=0 denied=0 unreadable=0`.
+    Any `unreadable` or `missing` entry from now on is a real finding.
 
 ### 3. CRM exclusion (HubSpot)
 
