@@ -17,6 +17,8 @@ targets: # measurable, with deadlines
   # free-form keys; keep numbers and dates explicit
 
 audience:
+  persona_id: "" # a folder under references/Synthetic Audiences/personas/, e.g. cro-vp-revenue
+  overlay: "" # the trigger scenario letter A-F the copy is built around
   personas: [] # titles / roles
   geography: []
   industries: []
@@ -54,6 +56,17 @@ signals: # which sources feed timing for this campaign
 mention_policy: >
   Which file is the name-drop allowlist, and the rule for using it.
 ```
+
+`persona_id` names a folder under `references/Synthetic Audiences/personas/`;
+`overlay` is the trigger letter A–F. The wiring harness requires both keys, and
+when a value is non-empty it checks that the letter is A–F and that the id names
+a package that exists. The advisory persona panel reads the binding from
+`settings_json.campaign.persona_id` / `.overlay` — **nothing copies this
+`audience:` block into `settings_json` yet**, so today the panel grades the
+simulator's own default seats and records that in
+`summary.persona_panel.binding`. An empty value with a one-line reason is
+acceptable while the persona is being grounded; a MISSING KEY fails the wiring
+harness (`tests/test_synthetic_audiences_wiring.py`).
 
 Optional siblings: `brief.md` (distilled strategy), `mentionable-*.md`
 (allowlists), `notes.md` (running decision log — the strategist appends

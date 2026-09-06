@@ -8,7 +8,27 @@ objective: >
 streams: [] # optional; add streams/<name>/stream.yaml per stream (see revenue-context)
 
 audience:
-  personas: []
+  # WHO this campaign is written for, as a grounded buying-committee seat.
+  # `persona_id` is a folder under references/Synthetic Audiences/personas/;
+  # `overlay` is the trigger scenario A-F the copy is built around (A forecast
+  # mistrust · B multi-market fragmentation · C quote-to-cash friction ·
+  # D renewal/expansion blind spots · E HubSpot rebuild/migration ·
+  # F "make AI useful" with unstable foundations).
+  #
+  # These are NOT optional decoration, but be precise about what reads them
+  # TODAY. The wiring harness fails when a key is absent, and when a value is
+  # non-empty it also checks the letter is A-F and the id names a real package.
+  # The pre-send persona panel (ADVISORY — it never blocks) reads the binding
+  # from `settings_json.campaign.persona_id` / `.overlay`; NOTHING copies this
+  # audience block into settings_json yet — signal_processor builds that block
+  # from the strategy JSON and emits `personas_used`, a list of job titles — so
+  # until it does, the panel grades the simulator's OWN default seats and says
+  # so in `summary.persona_panel.binding` and in a flag. Leave a value EMPTY
+  # with a one-line reason while a persona is being grounded; never delete the
+  # key.
+  persona_id: "" # e.g. cro-vp-revenue
+  overlay: "" # A-F
+  personas: [] # legacy title/role list; still feeds the envelope's personas_used
   geography: []
   industries: []
   qualifiers: []
