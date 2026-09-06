@@ -433,8 +433,9 @@ business-development/outreach-runs/_kb/outreach.db` (its own 2-row store).
 
 ### 8. Rules of engagement for any agent touching this system
 
-- Every test, harness, verification run or test `kb.py` call sets both
-  `OUTREACH_KB_DB` and `OUTREACH_RUNS_DIR` to unique temp paths before imports.
+- For tests, harnesses and verification runs, including `kb.py` used for
+  testing, set both `OUTREACH_KB_DB` and `OUTREACH_RUNS_DIR` to unique temp paths
+  before imports. Give each invocation its own subshell and fresh directory.
   Production invocations use the production environment in `config/crontab.txt`.
   Count the production KB's events before and after verification and say both
   numbers; inspect the production halt marker through its separate real path.
@@ -458,11 +459,30 @@ business-development/outreach-runs/_kb/outreach.db` (its own 2-row store).
   importing engine modules. Reapply isolation after loading environment files.
   Production operations use the production environment in `config/crontab.txt`;
   temporary test paths must never replace the production halt or suppression
-  checks. A present `STOP-OUTREACH` marker blocks new outreach mutations.
+  checks. Before any wet mutation, resolve the absolute production halt path
+  and production runs directory from the production configuration, independently
+  of temporary test paths. Read the real suppression state without writing it;
+  stop if either safety check cannot be verified. The kit uses
+  `QAKIT_PRODUCTION_RUNS_DIR` and `QAKIT_PRODUCTION_HALT_FILE` for these checks
+  and compares the production ledger digest before and after the run. A kit's
+  explicit synthetic-fixture handling of verified ledger absence is not a general
+  exemption from suppression checks. A present `STOP-OUTREACH` marker blocks
+  new outreach mutations; cleanup of test-owned objects remains allowed.
+- Present the approval request as the existing rich Discord embed card in
+  the configured outreach channel, with title, summary, labeled fields and
+  footer. Do not silently deliver it only to an administration channel. State
+  the planned work, spend, safety limits and actual approval status. Native
+  embeds are the established Meta Ads/outreach format, not HTML attachments
+  or invented web approval buttons. Verify that the gateway excludes the actual
+  bot's messages before posting a card as part of a zero-spend rehearsal.
+  When a normal human reply would trigger the model, link clearly from that
+  visible card to the isolated approval thread and show the exact command to
+  send there. Do not ask for approval in the ordinary parent channel.
 - A zero-spend Discord rehearsal uses an isolated child thread that is not
-  mapped to a campaign, a unique nonce, and an explicit test gate. Before any
-  post, prove that the gateway cannot consume or auto-reply in that channel or
-  thread; an unmapped thread or a message without mentions is not sufficient.
+  mapped to a campaign, a unique nonce, and an explicit test gate. Before
+  directing human approval to that thread, prove the gateway cannot consume or
+  auto-reply to human messages there; unmapped routing or omitted mentions is
+  not sufficient. The visible parent card uses the separate bot-exclusion check.
   If that isolation cannot be proven, stop the zero-spend rehearsal or obtain
   separate authorization for a normal model run. Check the
   production halt marker and authoritative approver before posting. The listener
