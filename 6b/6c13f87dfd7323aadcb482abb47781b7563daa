@@ -1,0 +1,21 @@
+outreach-strategist/README.md
+  s_0929f38dc364b3::t_25c314bae90a3e 270-272,275-278,1238-1278
+outreach-strategist/SKILL.md
+  s_0929f38dc364b3::t_d9993ac01d2956 436-440,454-491
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "6b6c13f87dfd7323aadcb482abb47781b7563daa",
+  "prompts": {},
+  "sessions": {
+    "s_0929f38dc364b3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a077cb-e87d-7b03-bc50-2d114ae249b6",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "romeoman <romeo@man.digital>"
+    }
+  }
+}
