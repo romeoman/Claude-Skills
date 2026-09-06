@@ -267,25 +267,48 @@ storage_ under the same variable name.
 ### 3.6 First-run smoke test — no credentials needed
 
 Two harnesses prove the install without any vendor key. Both run the **real**
-production modules (never a reimplementation) inside their own temporary
-`$OUTREACH_RUNS_DIR`, so the production ledger is never touched.
+production modules (never a reimplementation) with temporary
+`OUTREACH_KB_DB` and `OUTREACH_RUNS_DIR` paths. Set both before invoking them
+so inherited production defaults cannot redirect test writes. Each invocation
+below uses a fresh directory in its own subshell, cleans up its own files and
+leaves the caller's environment unchanged.
 
 ```bash
-# 1. Objection routing, adversarially. Runs reply_classifier, record_objection,
-#    suppression_ledger, campaign_contacts, all three watchers' processing
-#    paths and presend_review against recorded vendor-response fixtures.
-python3 scripts/tests/objection_e2e_test.py
+# Objection routing against recorded vendor-response fixtures.
+(
+  verification_tmp=$(mktemp -d) || exit 1
+  trap 'rm -rf -- "$verification_tmp"' EXIT
+  export OUTREACH_KB_DB="$verification_tmp/kb.db"
+  export OUTREACH_RUNS_DIR="$verification_tmp/runs"
+  python3 scripts/tests/objection_e2e_test.py
+)
 
-# 2. A raw pasted list, straight through the real machine: dedupe, exclusion
-#    with a stated reason, suppression before any research spend, the real
-#    gates with the real config, tier1-vs-tier2 disclosure both directions,
-#    and the CRM-leak gate.
-python3 scripts/tests/dummy_pasted_list_test.py
+# Pasted-list gates, dedupe, suppression and CRM exclusion.
+(
+  verification_tmp=$(mktemp -d) || exit 1
+  trap 'rm -rf -- "$verification_tmp"' EXIT
+  export OUTREACH_KB_DB="$verification_tmp/kb.db"
+  export OUTREACH_RUNS_DIR="$verification_tmp/runs"
+  python3 scripts/tests/dummy_pasted_list_test.py
+)
 
-# 3. Everything the current layout can run, one summary table, non-zero if any
-#    harness is red. Use --list first to see the manifest and what is skipped.
-bash scripts/tests/run-all-harnesses.sh --list
-bash scripts/tests/run-all-harnesses.sh
+# Inspect the available harnesses and layout-specific skips.
+(
+  verification_tmp=$(mktemp -d) || exit 1
+  trap 'rm -rf -- "$verification_tmp"' EXIT
+  export OUTREACH_KB_DB="$verification_tmp/kb.db"
+  export OUTREACH_RUNS_DIR="$verification_tmp/runs"
+  bash scripts/tests/run-all-harnesses.sh --list
+)
+
+# Run the suite once in its own fresh environment.
+(
+  verification_tmp=$(mktemp -d) || exit 1
+  trap 'rm -rf -- "$verification_tmp"' EXIT
+  export OUTREACH_KB_DB="$verification_tmp/kb.db"
+  export OUTREACH_RUNS_DIR="$verification_tmp/runs"
+  bash scripts/tests/run-all-harnesses.sh
+)
 ```
 
 Expected clean output: `RESULT: 42/42 scored checks passed` for the objection
@@ -1229,6 +1252,64 @@ materialises itself is now exempt from the "absent" branch only, derived from
 untouched: genuine shrink, same-count rewrite, salami drift, byte and
 non-blank-line checks, and a genuinely absent protected path the script does
 **not** write all still fail and page.
+
+### 8.5.1 Attended rehearsal and publication boundaries
+
+Show the approval request in the configured outreach channel using the existing
+Meta Ads/outreach rich embed format: title, summary, labeled fields and footer.
+State what will run, the spend and safety limits, and whether approval is still
+pending. Do not silently substitute an administration-only message, an HTML
+attachment or a web button. Verify that the gateway ignores the actual bot's
+messages before posting the visible card. If a human reply in that channel
+would trigger the model, include an explicit link to the isolated approval
+thread and the exact command to send there; approval belongs in that thread.
+
+An attended Discord rehearsal is a deliberately limited check: use an isolated,
+unmapped child thread, a unique nonce, temporary KB/runs/cursor paths and the
+listener's `--dry-run` mode. Before directing human approval to that thread,
+prove the gateway cannot consume or auto-reply to human messages there. The
+visible parent card uses the separate bot-exclusion check. Unmapped routing
+or omitting a mention does not establish zero spend. If gateway isolation cannot be proven,
+stop or obtain separate authorization for a normal model run.
+An explicit test gate avoids Mission Control reads
+and writes. Check the real production halt marker and configured approver before
+posting; only that person's real `approve <unique nonce> presend` command counts.
+This does not establish normal build/staging or delivery. A separately authorized
+wet synthetic DRAFT lifecycle can follow approval, with no send or activation,
+fresh DRAFT and halt checks before mutations, and verified cleanup. The `real`
+kit still requires explicit spend authorization in the current session. A
+procedure in these docs is not evidence that a rehearsal passed.
+
+Keep test isolation and production safety paths distinct: set both
+`OUTREACH_KB_DB` and `OUTREACH_RUNS_DIR` before engine imports and after loading
+any environment file. Production invocations use `config/crontab.txt`'s production
+environment. Before any wet mutation, require independently resolved absolute
+production halt/runs paths and a read-only check of the real suppression state.
+Fail closed if the halt or suppression check cannot be verified. The kit's
+`QAKIT_PRODUCTION_RUNS_DIR` and `QAKIT_PRODUCTION_HALT_FILE` are separate from
+the temporary engine paths; its production-ledger digest comparison checks for
+changes. Verified absence is governed by the specific synthetic kit contract,
+not permission to use an empty temporary suppression ledger. Never write the
+production KB or suppression ledger from tests. A halt blocks new mutations;
+cleanup of test-owned objects remains allowed.
+
+The default auth health monitor reads OpenClaw's authoritative local state with
+`openclaw models status --json --check`, without `--probe` or credential refresh.
+An explicitly chosen local data directory checks legacy metadata only. Local
+readiness cannot prove a paid provider request works, and cooldowns remain red.
+Access denied means the resource could not be inspected; it does not prove the
+resource is absent. Keep unknown results and cleanup failures visible.
+
+For publication, snapshot and compare the authoritative runtime skill first;
+preserve its additions when preparing reviewed changes. Update operational
+helper references and their documentation together, then synchronize the
+runtime copy and repository through one designated operator. Inspect every
+configured public mirror and refresh its distributable ZIP where configured.
+Publish only reusable guidance and allowed helper files: keep LEARNINGS,
+private evidence paths, logs, account identifiers, emails, campaign data and KB
+contents private. Review the public diff and ZIP contents before pushing, and
+let reviews complete before merging. A merged repository alone does not prove
+runtime parity; report deployment and rehearsal evidence separately.
 
 ### 8.6 The seed loop, and its kill switch
 

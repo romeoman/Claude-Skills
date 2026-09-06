@@ -433,10 +433,12 @@ business-development/outreach-runs/_kb/outreach.db` (its own 2-row store).
 
 ### 8. Rules of engagement for any agent touching this system
 
-- Every engine invocation, test, harness or `kb.py` call sets
-  `OUTREACH_KB_DB` and `OUTREACH_RUNS_DIR` to temp paths
-  (`OUTREACH_KB_DB=/tmp/<x>.db OUTREACH_RUNS_DIR=/tmp/<x>-runs`). Count the
-  production KB's events before and after and say both numbers.
+- For tests, harnesses and verification runs, including `kb.py` used for
+  testing, set both `OUTREACH_KB_DB` and `OUTREACH_RUNS_DIR` to unique temp paths
+  before imports. Give each invocation its own subshell and fresh directory.
+  Production invocations use the production environment in `config/crontab.txt`.
+  Count the production KB's events before and after verification and say both
+  numbers; inspect the production halt marker through its separate real path.
 - Never run `docker exec` / `docker cp` into `openclaw` in parallel with
   another agent; one agent, sequential.
 - Never print a secret. Read `.env` through a grep allowlist into a variable;
@@ -449,6 +451,63 @@ business-development/outreach-runs/_kb/outreach.db` (its own 2-row store).
 - Zero spend by default: `--dry-run` first, then one authorised live call,
   measured on the vendor's own ledger, with Romeo's explicit go for anything
   that bills.
+
+### 9. Attended verification and honest readiness claims
+
+- Every test, harness and verification invocation sets **both**
+  `OUTREACH_KB_DB` and `OUTREACH_RUNS_DIR` to unique temporary paths before
+  importing engine modules. Reapply isolation after loading environment files.
+  Production operations use the production environment in `config/crontab.txt`;
+  temporary test paths must never replace the production halt or suppression
+  checks. Before any wet mutation, resolve the absolute production halt path
+  and production runs directory from the production configuration, independently
+  of temporary test paths. Read the real suppression state without writing it;
+  stop if either safety check cannot be verified. The kit uses
+  `QAKIT_PRODUCTION_RUNS_DIR` and `QAKIT_PRODUCTION_HALT_FILE` for these checks
+  and compares the production ledger digest before and after the run. A kit's
+  explicit synthetic-fixture handling of verified ledger absence is not a general
+  exemption from suppression checks. A present `STOP-OUTREACH` marker blocks
+  new outreach mutations; cleanup of test-owned objects remains allowed.
+- Present the approval request as the existing rich Discord embed card in
+  the configured outreach channel, with title, summary, labeled fields and
+  footer. Do not silently deliver it only to an administration channel. State
+  the planned work, spend, safety limits and actual approval status. Native
+  embeds are the established Meta Ads/outreach format, not HTML attachments
+  or invented web approval buttons. Verify that the gateway excludes the actual
+  bot's messages before posting a card as part of a zero-spend rehearsal.
+  When a normal human reply would trigger the model, link clearly from that
+  visible card to the isolated approval thread and show the exact command to
+  send there. Do not ask for approval in the ordinary parent channel.
+- A zero-spend Discord rehearsal uses an isolated child thread that is not
+  mapped to a campaign, a unique nonce, and an explicit test gate. Before
+  directing human approval to that thread, prove the gateway cannot consume or
+  auto-reply to human messages there; unmapped routing or omitted mentions is
+  not sufficient. The visible parent card uses the separate bot-exclusion check.
+  If that isolation cannot be proven, stop the zero-spend rehearsal or obtain
+  separate authorization for a normal model run. Check the
+  production halt marker and authoritative approver before posting. The listener
+  runs with `--dry-run`, temporary KB/runs/cursor paths, and the explicit gate
+  avoids Mission Control reads and writes. Only the configured human approver's
+  real `approve <unique nonce> presend` command counts as approval.
+- That interaction proves the attended approval path under those conditions.
+  It does **not** prove ordinary build/staging, delivery, or paid provider health.
+  If separately authorized, run the wet kit's synthetic DRAFT create/prospect/
+  delete lifecycle after approval. Never send or activate a campaign; recheck
+  DRAFT status and the halt marker before mutations, then verify cleanup. A
+  cleanup failure or ambiguous write remains unresolved, even if approval worked.
+  Do not run the `real` kit without explicit authorization for spend in the
+  current session. Rehearsal instructions describe a procedure, not a pass.
+- The auth monitor's default local readiness check uses OpenClaw's authoritative
+  credential state through `openclaw models status --json --check`, without a
+  live provider probe. Do not add `--probe`, refresh credentials, or switch to a
+  legacy credential file to make a red result green. An explicitly selected
+  local data directory checks legacy metadata only. Report unknown, cooldown,
+  missing credentials and provider errors honestly; local readiness does not
+  establish that a paid request succeeds.
+- Access denied proves lack of access, not absence of a campaign, credential,
+  event or resource. Preserve that distinction in reports. Record exact
+  scoreboards and unresolved failures in private evidence; never publish
+  credentials, private logs, account identifiers or knowledge-base contents.
 
 ## Knowledge inputs (what you are expected to already know)
 
